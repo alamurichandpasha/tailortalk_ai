@@ -31,19 +31,15 @@ class CalendarService:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
+                # Only run local server if not on Render
+                if os.getenv("RENDER") == "true":
+                    raise RuntimeError("Missing valid token.pickle on server. Generate it locally.")
+                
                 flow = InstalledAppFlow.from_client_config(
                     json.loads(client_secret_json),
                     scopes=SCOPES
                 )
-
-                # For Render, prompt user manually (Render doesn't support local server)
-                if os.getenv("RENDER") == "true":
-                    auth_url, _ = flow.authorization_url(prompt='consent')
-                    raise RuntimeError(
-                        f"Authorize this app locally by visiting this URL: {auth_url}"
-                    )
-                else:
-                    creds = flow.run_local_server(port=0)
+                creds = flow.run_local_server(port=0)
 
             # Cache credentials
             os.makedirs(os.path.dirname(token_path), exist_ok=True)
