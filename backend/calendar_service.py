@@ -21,7 +21,14 @@ class CalendarService:
             json.loads(client_secret_json),
             scopes=SCOPES
         )
-        creds = flow.run_local_server(port=0)
+        if os.getenv("RENDER") == "true":
+    auth_url, _ = flow.authorization_url(prompt='consent')
+    raise RuntimeError(
+        f"Authorize this app by visiting this URL manually and running locally: {auth_url}"
+    )
+else:
+    creds = flow.run_local_server(port=0)
+
 
         # ✅ Build calendar API service
         self.service = build("calendar", "v3", credentials=creds)
