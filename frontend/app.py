@@ -4,7 +4,7 @@ import streamlit as st
 import requests
 
 # ✅ Update with your deployed backend URL
-BACKEND_URL = "https://tailortalk-backend.onrender.com"
+BACKEND_URL = "https://tailortalk-ai-1.onrender.com"
 
 st.set_page_config(page_title="TailorTalk Bot", page_icon="🧵")
 st.title("✂️ TailorTalk Appointment Bot")
