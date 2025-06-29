@@ -2,7 +2,8 @@
 import streamlit as st
 import requests
 
-BACKEND_URL = "http://127.0.0.1:8000"
+# 🔄 USE your deployed Render backend URL here
+BACKEND_URL = "https://tailortalk-backend.onrender.com"  # ✅ Change this line
 
 st.title("✂️ TailorTalk Appointment Bot")
 
