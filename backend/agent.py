@@ -5,7 +5,8 @@ from typing import TypedDict, List, Dict, Optional
 
 from langgraph.graph import StateGraph
 from backend.calendar_service import CalendarService
-from nlp_parser import parse_user_input  # local NLP parser
+from backend.nlp_parser import parse_user_input
+  # local NLP parser
 
 # Define the agent state used across LangGraph nodes
 class AgentState(TypedDict):
