@@ -1,8 +1,6 @@
-# backend/calendar_service.py
-
 import os
-import pickle
-from datetime import datetime, timedelta, timezone  # ✅ Add timezone
+import json
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict
 
 from google.auth.transport.requests import Request
@@ -11,36 +9,26 @@ from googleapiclient.discovery import build
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
-
 class CalendarService:
     def __init__(self):
-        # Path to OAuth 2.0 client secrets
-        cred_path = os.getenv(
-            "GOOGLE_OAUTH_CLIENT_SECRET",
-            os.path.join(os.getcwd(), "credentials", "client_secret.json")
+        # ✅ Read client config from environment
+        client_secret_json = os.getenv("GOOGLE_CLIENT_SECRET_JSON")
+        if not client_secret_json:
+            raise ValueError("Missing GOOGLE_CLIENT_SECRET_JSON environment variable")
+
+        # ✅ Load credentials from client config (no file read)
+        flow = InstalledAppFlow.from_client_config(
+            json.loads(client_secret_json),
+            scopes=SCOPES
         )
-        token_path = os.path.join(os.getcwd(), "credentials", "token.pickle")
+        creds = flow.run_local_server(port=0)
 
-        creds = None
-        if os.path.exists(token_path):
-            with open(token_path, "rb") as token_file:
-                creds = pickle.load(token_file)
-
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(cred_path, SCOPES)
-                creds = flow.run_local_server(port=0)
-            with open(token_path, "wb") as token_file:
-                pickle.dump(creds, token_file)
-
+        # ✅ Build calendar API service
         self.service = build("calendar", "v3", credentials=creds)
 
     def list_free_slots(self, start: datetime, end: datetime) -> List[Dict[str, str]]:
         """Return a list of free slots between `start` & `end` in ISO format."""
 
-        # ✅ Ensure timezone-aware datetime in UTC
         start = start.replace(tzinfo=timezone.utc)
         end = end.replace(tzinfo=timezone.utc)
 
@@ -79,7 +67,6 @@ class CalendarService:
     def create_event(self, start: datetime, end: datetime, title: str) -> Dict[str, str]:
         """Insert an event and return its metadata."""
 
-        # ✅ Ensure timezone-aware datetimes
         start = start.replace(tzinfo=timezone.utc)
         end = end.replace(tzinfo=timezone.utc)
 
