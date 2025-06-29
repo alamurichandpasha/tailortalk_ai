@@ -21,6 +21,7 @@ class AgentState(TypedDict):
 cal = CalendarService()
 
 # Step 1: Parse the user query using local NLP logic
+
 def parse_fn(state: AgentState) -> AgentState:
     parsed = parse_user_input(state["user_text"])
     print("Parsed locally:", parsed)
@@ -28,6 +29,7 @@ def parse_fn(state: AgentState) -> AgentState:
         "user_text": state["user_text"],
         "parsed": json.dumps(parsed)
     }
+
 
 # Step 2: Check available slots in the user's time range
 def avail_fn(state: AgentState) -> AgentState:
@@ -81,22 +83,14 @@ def format_fn(state: AgentState) -> AgentState:
 
 # Step 5: Route the flow depending on detected intent
 def route_fn(state: AgentState) -> str:
-    try:
-        parsed = json.loads(state["parsed"])
-        intent = parsed.get("intent")
-
-        if intent == "check":
-            return "check_availability"
-        if intent == "book":
-            # only proceed to booking if both start and end present
-            if parsed.get("time_start") and parsed.get("time_end"):
-                return "book_slot"
-            else:
-                print("❌ Missing time info for booking. Falling back to formatter.")
-    except Exception as e:
-        print("❌ Route error:", e)
-
+    parsed = json.loads(state.get("parsed","{}"))
+    if parsed.get("intent") == "check":
+        return "check_availability"
+    if parsed.get("intent") == "book":
+        # now time_end will always exist for booking
+        return "book_slot"
     return "format_response"
+
 
 # Step 6: Build and wire the LangGraph
 graph = StateGraph(AgentState)
