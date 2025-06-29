@@ -4,7 +4,7 @@ from datetime import datetime, timezone  # <-- Add timezone
 from typing import TypedDict, List, Dict, Optional
 
 from langgraph.graph import StateGraph
-from calendar_service import CalendarService
+from backend.calendar_service import CalendarService
 from nlp_parser import parse_user_input  # local NLP parser
 
 # Define the agent state used across LangGraph nodes
