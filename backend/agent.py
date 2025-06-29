@@ -1,12 +1,13 @@
+# backend/agent.py
+
 import os
 import json
-from datetime import datetime, timezone  # <-- Add timezone
+from datetime import datetime, timezone
 from typing import TypedDict, List, Dict, Optional
 
 from langgraph.graph import StateGraph
 from backend.calendar_service import CalendarService
-from backend.nlp_parser import parse_user_input
-  # local NLP parser
+from backend.nlp_parser import parse_user_input  # improved NLP parser
 
 # Define the agent state used across LangGraph nodes
 class AgentState(TypedDict):
@@ -21,33 +22,29 @@ cal = CalendarService()
 
 # Step 1: Parse the user query using local NLP logic
 def parse_fn(state: AgentState) -> AgentState:
-    try:
-        parsed = parse_user_input(state["user_text"])
-        print("Parsed locally:", parsed)
-        return {
-            "user_text": state["user_text"],
-            "parsed": json.dumps(parsed)
-        }
-    except Exception as e:
-        print("❌ Parsing error:", e)
-        return {
-            "user_text": state["user_text"],
-            "response": "Sorry, I couldn't understand your request."
-        }
+    parsed = parse_user_input(state["user_text"])
+    print("Parsed locally:", parsed)
+    return {
+        "user_text": state["user_text"],
+        "parsed": json.dumps(parsed)
+    }
 
 # Step 2: Check available slots in the user's time range
 def avail_fn(state: AgentState) -> AgentState:
     parsed = json.loads(state["parsed"])
     date = parsed["date"]
-    start = datetime.fromisoformat(f"{date}T{parsed.get('time_start') or '00:00'}").replace(tzinfo=timezone.utc)
-    end   = datetime.fromisoformat(f"{date}T{parsed.get('time_end') or '23:59'}").replace(tzinfo=timezone.utc)
+    # default full-day if no times given
+    start_time = parsed.get("time_start") or "00:00"
+    end_time   = parsed.get("time_end")   or "23:59"
+    start = datetime.fromisoformat(f"{date}T{start_time}").replace(tzinfo=timezone.utc)
+    end   = datetime.fromisoformat(f"{date}T{end_time}").replace(tzinfo=timezone.utc)
     slots = cal.list_free_slots(start, end)
     return {"slots": slots}
 
 # Step 3: Book an event based on user input
 def book_fn(state: AgentState) -> AgentState:
     parsed = json.loads(state["parsed"])
-
+    # require both start and end
     if not parsed.get("time_start") or not parsed.get("time_end"):
         return {"response": "Time details missing. Please specify both start and end times."}
 
@@ -72,7 +69,7 @@ def format_fn(state: AgentState) -> AgentState:
         lines = [f"- {s['start']} to {s['end']}" for s in slots]
         return {"response": "Here are your free slots:\n" + "\n".join(lines)}
 
-    elif intent == "book":
+    if intent == "book":
         event = state.get("event")
         if not event:
             return {"response": "Booking failed due to incomplete information."}
@@ -90,7 +87,8 @@ def route_fn(state: AgentState) -> str:
 
         if intent == "check":
             return "check_availability"
-        elif intent == "book":
+        if intent == "book":
+            # only proceed to booking if both start and end present
             if parsed.get("time_start") and parsed.get("time_end"):
                 return "book_slot"
             else:
@@ -110,10 +108,14 @@ graph.add_node("format_response", format_fn)
 
 graph.set_entry_point("parse_request")
 
-graph.add_conditional_edges("parse_request", route_fn, {
-    "check_availability": "check_availability",
-    "book_slot": "book_slot"
-})
+graph.add_conditional_edges(
+    "parse_request",
+    route_fn,
+    {
+        "check_availability": "check_availability",
+        "book_slot": "book_slot"
+    }
+)
 graph.add_edge("check_availability", "format_response")
 graph.add_edge("book_slot", "format_response")
 
