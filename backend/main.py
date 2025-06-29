@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from agent import run_agent  # Import your agent function
+from backend.agent import run_agent  # ✅ correct
+
 
 app = FastAPI()
 
